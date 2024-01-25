@@ -2,6 +2,7 @@
 // @name         YouTube Mini Player
 // @namespace    http://tampermonkey.net/
 // @version      1.0
+// @license      MIT
 // @description  let you watch video and comments at the same time!
 // @updateURL    https://raw.githubusercontent.com/AkiyaKiko/YouTubeMiniPlayer/main/YouTubeMiniPlayer.js
 // @downloadURL  https://raw.githubusercontent.com/AkiyaKiko/YouTubeMiniPlayer/main/YouTubeMiniPlayer.js
