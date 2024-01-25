@@ -3,6 +3,8 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  let you watch video and comments at the same time!
+// @updateURL    https://raw.githubusercontent.com/AkiyaKiko/YouTubeMiniPlayer/main/YouTubeMiniPlayer.js
+// @downloadURL  https://raw.githubusercontent.com/AkiyaKiko/YouTubeMiniPlayer/main/YouTubeMiniPlayer.js
 // @author       https://github.com/AkiyaKiko
 // @homepage     https://github.com/AkiyaKiko/YouTubeMiniPlayer
 // @match        https://www.youtube.com/watch*
