@@ -4,7 +4,7 @@
 // @version      1.0
 // @description  let you watch video and comments at the same time!
 // @author       https://github.com/AkiyaKiko
-// @homepage     https://github.com/AkikaKiko/YouTubeMiniPlayer
+// @homepage     https://github.com/AkiyaKiko/YouTubeMiniPlayer
 // @match        https://www.youtube.com/watch*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @run-at       document-end
