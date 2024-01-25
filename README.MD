@@ -20,3 +20,5 @@ Step 5. When you scroll down in video page, There will be a button on your right
 Step 6. Click it will turn on the mini-player. 
 Step 7. Scroll up to the main video location, the mini-player will be disappeared. 
 ```
+
+## Install through [GreasyFork](https://greasyfork.org/en/scripts/485650-youtube-mini-player)
