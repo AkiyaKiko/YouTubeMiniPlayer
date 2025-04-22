@@ -5,6 +5,7 @@
 // @version      2.1.1
 // @license      MIT
 // @description  Youtube Mini Player. When you scroll down the mini player will appear.
+// @description:zh-cn   Youtube 小屏播放。当你向下滚动时，小屏播放器将会出现。
 // @author       https://github.com/AkiyaKiko
 // @homepage     https://github.com/AkiyaKiko/YouTubeMiniPlayer
 // @match        https://www.youtube.com/watch?*
