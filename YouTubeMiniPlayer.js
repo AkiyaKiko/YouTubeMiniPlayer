@@ -11,8 +11,6 @@
 // @run-at       document-end
 // @grant        GM_addStyle
 // @grant        GM_log
-// @downloadURL https://update.greasyfork.org/scripts/485650/YouTube%20Mini%20Player%20Min%20Width%20Control.user.js
-// @updateURL    https://update.greasyfork.org/scripts/485650/YouTube%20Mini%20Player%20Min%20Width%20Control.meta.js
 // ==/UserScript==
 
 (function() {
