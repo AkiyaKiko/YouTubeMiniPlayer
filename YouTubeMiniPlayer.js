@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         YouTube Mini Player
+// @name:zh-CN   Youtube 小屏播放
 // @namespace    http://tampermonkey.net/
-// @version      2.1
+// @version      2.1.1
 // @license      MIT
 // @description  Youtube Mini Player. When you scroll down the mini player will appear.
 // @author       https://github.com/AkiyaKiko
