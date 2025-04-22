@@ -18,7 +18,7 @@
 (function() {
     'use strict';
 
-    GM_log('脚本 "YouTube Mini Player Min Width Control" 开始执行');
+    GM_log('脚本 "YouTube Mini Player" 开始执行');
 
     const miniPlayerClass = 'youtube-mini-player-active';
     let playerElement = null;
