@@ -2,7 +2,7 @@
 // @name         YouTube Mini Player
 // @name:zh-CN   Youtube 小屏播放
 // @namespace    http://tampermonkey.net/
-// @version      2.1.1
+// @version      2.2.0
 // @license      MIT
 // @description  Youtube Mini Player. When you scroll down the mini player will appear.
 // @description:zh-CN   Youtube 小屏播放。当你向下滚动时，小屏播放器将会出现。
@@ -18,7 +18,7 @@
 (function() {
     'use strict';
 
-    GM_log('脚本 "YouTube Mini Player" 开始执行');
+    GM_log('脚本 "YouTube Mini Player Fullscreen Check" 开始执行');
 
     const miniPlayerClass = 'youtube-mini-player-active';
     let playerElement = null;
@@ -35,8 +35,12 @@
     let observer = null;
     let isMiniPlayerActive = false;
 
+    function isFullscreen() {
+        return !!document.fullscreenElement;
+    }
+
     function minimizeOuterContainer() {
-        if (!outerContainer || isMiniPlayerActive) return;
+        if (!outerContainer || isMiniPlayerActive || isFullscreen()) return;
 
         GM_log('minimizeOuterContainer: 开始缩小/移动 outer (设置 min-width: 0), 调整 inner 尺寸并移除 padding-top, 隐藏底部控制栏, 并更新视频/IV内容尺寸');
         originalOuterContainerStyle = outerContainer.getAttribute('style');
@@ -59,7 +63,7 @@
         outerContainer.style.height = `${floatingHeight}px`;
         outerContainer.style.zIndex = '3000';
         outerContainer.style.boxShadow = '2px 2px 5px rgba(0, 0, 0, 0.3)';
-        outerContainer.style.minWidth = '0px'; // 添加 min-width: 0
+        outerContainer.style.minWidth = '0px';
         outerContainer.classList.add(miniPlayerClass);
         isMiniPlayerActive = true;
 
@@ -88,11 +92,11 @@
     }
 
     function restoreOuterContainer() {
-        if (!outerContainer || !isMiniPlayerActive) return;
+        if (!outerContainer || !isMiniPlayerActive || isFullscreen()) return;
 
         GM_log('restoreOuterContainer: 开始恢复 outer 原始样式 (移除 min-width), 恢复 inner 原始样式 (移除 style 属性), 并显示底部控制栏');
         outerContainer.setAttribute('style', originalOuterContainerStyle || '');
-        outerContainer.style.removeProperty('min-width'); // 移除 min-width 样式
+        outerContainer.style.removeProperty('min-width');
         outerContainer.classList.remove(miniPlayerClass);
         originalOuterContainerStyle = null;
         isMiniPlayerActive = false;
@@ -139,8 +143,13 @@
                         GM_log("IntersectionObserver: playerElement 进入视野，恢复容器和控制栏");
                         restoreOuterContainer();
                     } else {
-                        GM_log("IntersectionObserver: playerElement 离开视野，缩小容器并隐藏控制栏");
-                        minimizeOuterContainer();
+                        GM_log("IntersectionObserver: playerElement 离开视野，检查是否全屏");
+                        if (!isFullscreen()) {
+                            GM_log("IntersectionObserver: 未处于全屏，执行缩小操作");
+                            minimizeOuterContainer();
+                        } else {
+                            GM_log("IntersectionObserver: 处于全屏模式，跳过缩小操作");
+                        }
                     }
                 });
             }, { threshold: 0 }
