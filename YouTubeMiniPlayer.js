@@ -2,7 +2,7 @@
 // @name         YouTube Mini Player
 // @name:zh-CN   Youtube 小屏播放
 // @namespace    http://tampermonkey.net/
-// @version      2.2.0
+// @version      2.2.1
 // @license      MIT
 // @description  Youtube Mini Player. When you scroll down the mini player will appear.
 // @description:zh-CN   Youtube 小屏播放。当你向下滚动时，小屏播放器将会出现。
@@ -221,9 +221,11 @@
         videoElement = document.querySelector('video.video-stream.html5-main-video');
         ivVideoContent = document.querySelector('.ytp-iv-video-content');
         bottomChrome = document.querySelector('.ytp-chrome-bottom');
-        GM_log(`waitForElements: 尝试获取元素 - player: ${playerElement}, outer: ${outerContainer}, inner: ${innerContainer}, video: ${videoElement}, iv: ${ivVideoContent}, bottom: ${bottomChrome}`);
-
-        if (playerElement && outerContainer && innerContainer && videoElement) {
+        const contentsElement = document.getElementById('contents'); // 修改这里
+    
+        GM_log(`waitForElements: 尝试获取元素 - player: ${playerElement}, outer: ${outerContainer}, inner: ${innerContainer}, video: ${videoElement}, iv: ${ivVideoContent}, bottom: ${bottomChrome}, contents: ${contentsElement}`); // 打印修改了
+    
+        if (playerElement && outerContainer && innerContainer && videoElement && contentsElement) { // 修改这里
             GM_log('waitForElements: 所有必要元素已找到，调用 initialize');
             initialize();
         } else {
@@ -233,14 +235,16 @@
                     const foundOuterContainer = document.getElementById('player-container-outer');
                     const foundInnerContainer = document.getElementById('player-container-inner');
                     const foundVideo = document.querySelector('video.video-stream.html5-main-video');
-                    if (foundPlayer && foundOuterContainer && foundInnerContainer && foundVideo) {
+                    const foundContents = document.getElementById('contents'); // 修改这里
+    
+                    if (foundPlayer && foundOuterContainer && foundInnerContainer && foundVideo && foundContents) { // 修改这里
                         GM_log('MutationObserver: 检测到所有必要元素，调用 initialize');
                         initialize();
                     } else {
                         GM_log('MutationObserver: 仍然有必要元素未找到');
                     }
                 });
-
+    
                 observer.observe(document.body, {
                     childList: true,
                     subtree: true
