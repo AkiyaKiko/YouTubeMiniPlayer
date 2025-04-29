@@ -2,13 +2,13 @@
 // @name         YouTube Mini Player
 // @name:zh-CN   Youtube 小屏播放
 // @namespace    http://tampermonkey.net/
-// @version      2.2.1
+// @version      2.3.0
 // @license      MIT
 // @description  Youtube Mini Player. When you scroll down the mini player will appear.
 // @description:zh-CN   Youtube 小屏播放。当你向下滚动时，小屏播放器将会出现。
 // @author       https://github.com/AkiyaKiko
 // @homepage     https://github.com/AkiyaKiko/YouTubeMiniPlayer
-// @match        https://www.youtube.com/watch?*
+// @match        https://www.youtube.com/*
 // @icon         https://www.youtube.com/favicon.ico
 // @run-at       document-end
 // @grant        GM_addStyle
@@ -18,7 +18,7 @@
 (function() {
     'use strict';
 
-    GM_log('脚本 "YouTube Mini Player Fullscreen Check" 开始执行');
+    GM_log('🛠️ 脚本 "YouTube Mini Player Fullscreen Check" 开始执行');
 
     const miniPlayerClass = 'youtube-mini-player-active';
     let playerElement = null;
@@ -34,6 +34,11 @@
     let intersectionObserver = null;
     let observer = null;
     let isMiniPlayerActive = false;
+    let lastUrl = location.href;
+    let initializedUrl = null;
+    let isDragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
 
     function isFullscreen() {
         return !!document.fullscreenElement;
@@ -41,12 +46,12 @@
 
     function minimizeOuterContainer() {
         if (!outerContainer || isMiniPlayerActive || isFullscreen()) return;
+        GM_log('🔽 minimizeOuterContainer: 开始小窗模式');
 
-        GM_log('minimizeOuterContainer: 开始缩小/移动 outer (设置 min-width: 0), 调整 inner 尺寸并移除 padding-top, 隐藏底部控制栏, 并更新视频/IV内容尺寸');
         originalOuterContainerStyle = outerContainer.getAttribute('style');
-        originalInnerContainerStyle = innerContainer ? innerContainer.getAttribute('style') : null;
-        originalVideoStyle = videoElement ? videoElement.getAttribute('style') : null;
-        originalIvContentStyle = ivVideoContent ? ivVideoContent.getAttribute('style') : null;
+        originalInnerContainerStyle = innerContainer?.getAttribute('style');
+        originalVideoStyle = videoElement?.getAttribute('style');
+        originalIvContentStyle = ivVideoContent?.getAttribute('style');
 
         const floatingWidth = window.innerWidth / 5;
         const aspectRatio = outerContainer.offsetWidth / outerContainer.offsetHeight;
@@ -71,133 +76,139 @@
             innerContainer.style.width = `${floatingWidth}px`;
             innerContainer.style.height = `${floatingHeight}px`;
             innerContainer.style.paddingTop = '0px';
-            GM_log(`minimizeOuterContainer: 更新 innerContainer 尺寸并设置 padding-top: 0 - width: ${floatingWidth}px, height: ${floatingHeight}px`);
         }
-        if (bottomChrome) {
-            bottomChrome.style.display = 'none';
-            GM_log('minimizeOuterContainer: 隐藏底部控制栏');
-        }
+        if (bottomChrome) bottomChrome.style.display = 'none';
         if (videoElement) {
             videoElement.style.width = `${floatingWidth}px`;
             videoElement.style.height = `${floatingHeight}px`;
-            GM_log(`minimizeOuterContainer: 更新 video 标签尺寸 - width: ${floatingWidth}px, height: ${floatingHeight}px`);
         }
         if (ivVideoContent) {
             ivVideoContent.style.width = `${floatingWidth}px`;
             ivVideoContent.style.height = `${floatingHeight}px`;
-            GM_log(`minimizeOuterContainer: 更新 ytp-iv-video-content 尺寸 - width: ${floatingWidth}px, height: ${floatingHeight}px`);
         }
 
-        GM_log(`minimizeOuterContainer: player-container-outer 缩小并移动完成 (min-width: 0) - width: ${floatingWidth}px, height: ${floatingHeight}px, right: ${rightOffset}px, bottom: ${bottomOffset}px`);
+        enableDragging();
     }
 
     function restoreOuterContainer() {
         if (!outerContainer || !isMiniPlayerActive || isFullscreen()) return;
+        GM_log('🔼 restoreOuterContainer: 恢复播放器原状');
 
-        GM_log('restoreOuterContainer: 开始恢复 outer 原始样式 (移除 min-width), 恢复 inner 原始样式 (移除 style 属性), 并显示底部控制栏');
         outerContainer.setAttribute('style', originalOuterContainerStyle || '');
-        outerContainer.style.removeProperty('min-width');
         outerContainer.classList.remove(miniPlayerClass);
         originalOuterContainerStyle = null;
         isMiniPlayerActive = false;
 
-        if (innerContainer) {
-            innerContainer.removeAttribute('style');
-            originalInnerContainerStyle = null;
-            GM_log('restoreOuterContainer: 恢复 innerContainer 的原始样式 (移除 style 属性)');
-        }
-        if (bottomChrome) {
-            bottomChrome.style.display = '';
-            GM_log('restoreOuterContainer: 显示底部控制栏');
-        }
-        if (videoElement) {
-            videoElement.setAttribute('style', originalVideoStyle || '');
-            originalVideoStyle = null;
-            GM_log('restoreOuterContainer: 恢复 video 标签的原始尺寸');
-        }
-        if (ivVideoContent) {
-            ivVideoContent.setAttribute('style', originalIvContentStyle || '');
-            originalIvContentStyle = null;
-            GM_log('restoreOuterContainer: 恢复 ytp-iv-video-content 的原始尺寸');
-        }
+        if (innerContainer) innerContainer.removeAttribute('style');
+        if (bottomChrome) bottomChrome.style.display = '';
+        if (videoElement) videoElement.setAttribute('style', originalVideoStyle || '');
+        if (ivVideoContent) ivVideoContent.setAttribute('style', originalIvContentStyle || '');
 
-        GM_log('restoreOuterContainer: player-container-outer 的原始样式已恢复 (min-width removed)');
+        disableDragging();
+    }
+
+    function enableDragging() {
+        if (!outerContainer) return;
+
+        outerContainer.addEventListener('mousedown', onMouseDown);
+        GM_log('🎯 小窗拖动启用');
+    }
+
+    function disableDragging() {
+        if (!outerContainer) return;
+
+        outerContainer.removeEventListener('mousedown', onMouseDown);
+        GM_log('🛑 小窗拖动禁用');
+    }
+
+    function onMouseDown(e) {
+        if (!isMiniPlayerActive) return;
+        isDragging = true;
+        dragOffsetX = e.clientX - outerContainer.getBoundingClientRect().left;
+        dragOffsetY = e.clientY - outerContainer.getBoundingClientRect().top;
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        e.preventDefault();
+    }
+
+    function onMouseMove(e) {
+        if (!isDragging) return;
+
+        outerContainer.style.left = `${e.clientX - dragOffsetX}px`;
+        outerContainer.style.top = `${e.clientY - dragOffsetY}px`;
+        outerContainer.style.right = 'auto';
+        outerContainer.style.bottom = 'auto';
+    }
+
+    function onMouseUp() {
+        isDragging = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
     }
 
     function observePlayerVisibility() {
         if (!playerElement) {
-            GM_log('observePlayerVisibility: playerElement 为 null，无法创建 IntersectionObserver');
+            GM_log('❌ observePlayerVisibility: playerElement不存在，退出');
             return;
         }
 
         if (intersectionObserver) {
             intersectionObserver.disconnect();
             intersectionObserver = null;
-            GM_log('observePlayerVisibility: 断开之前的 Intersection Observer');
         }
 
-        intersectionObserver = new IntersectionObserver(
-            entries => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        GM_log("IntersectionObserver: playerElement 进入视野，恢复容器和控制栏");
-                        restoreOuterContainer();
-                    } else {
-                        GM_log("IntersectionObserver: playerElement 离开视野，检查是否全屏");
-                        if (!isFullscreen()) {
-                            GM_log("IntersectionObserver: 未处于全屏，执行缩小操作");
-                            minimizeOuterContainer();
-                        } else {
-                            GM_log("IntersectionObserver: 处于全屏模式，跳过缩小操作");
-                        }
+        GM_log('👀 开始监听播放器可见性 IntersectionObserver');
+        intersectionObserver = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    GM_log('👁️ 播放器在视口内，恢复大屏');
+                    restoreOuterContainer();
+                } else {
+                    if (!isFullscreen()) {
+                        GM_log('🔍 播放器离开视口，且不是全屏，缩小为小窗');
+                        minimizeOuterContainer();
                     }
-                });
-            }, { threshold: 0 }
-        );
+                }
+            });
+        }, { threshold: 0 });
 
         intersectionObserver.observe(playerElement);
-        GM_log('observePlayerVisibility: 开始监听 playerElement 的可见性');
     }
 
-    function initialize() {
-        GM_log('initialize: 重新初始化脚本');
-        playerElement = document.getElementById('player');
-        outerContainer = document.getElementById('player-container-outer');
-        innerContainer = document.getElementById('player-container-inner');
-        videoElement = document.querySelector('video.video-stream.html5-main-video');
-        ivVideoContent = document.querySelector('.ytp-iv-video-content');
-        bottomChrome = document.querySelector('.ytp-chrome-bottom');
-        GM_log(`initialize: 获取元素 - player: ${playerElement}, outer: ${outerContainer}, inner: ${innerContainer}, video: ${videoElement}, iv: ${ivVideoContent}, bottom: ${bottomChrome}`);
-
-        if (playerElement && outerContainer && innerContainer && videoElement) {
-            GM_log('initialize: 所有必要元素已找到，开始观察播放器可见性');
-            observePlayerVisibility();
-            window.addEventListener('resize', handleResize);
-            GM_log('initialize: 添加 resize 事件监听器');
-            if (observer) {
-                observer.disconnect();
-                observer = null;
-                GM_log('initialize: 断开 DOM 变化监听器');
-            }
-            isMiniPlayerActive = false;
-            restoreOuterContainer();
-        } else {
-            GM_log('initialize: 仍然有必要元素未找到，继续等待...');
-            waitForElements();
+    function waitForElements() {
+        if (!observer) {
+            GM_log('⌛ 必要元素未找到，使用MutationObserver等待...');
+            observer = new MutationObserver(() => {
+                if (document.getElementById('player') &&
+                    document.getElementById('player-container-outer') &&
+                    document.getElementById('player-container-inner') &&
+                    document.querySelector('video.video-stream.html5-main-video') &&
+                    document.getElementById('contents')) {
+                    observer.disconnect();
+                    observer = null;
+                    GM_log('✅ MutationObserver: 检测到所有必要元素，开始initialize');
+                    initialize();
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
         }
     }
 
     function handleResize() {
         if (outerContainer && outerContainer.classList.contains(miniPlayerClass)) {
+            GM_log('📐 窗口大小变化，重新调整小窗尺寸');
             const floatingWidth = window.innerWidth / 5;
             const aspectRatio = outerContainer.offsetWidth / outerContainer.offsetHeight;
             const floatingHeight = floatingWidth / aspectRatio;
             const rightOffset = window.innerWidth * 0.03;
             const bottomOffset = window.innerHeight * 0.02;
+
             outerContainer.style.width = `${floatingWidth}px`;
             outerContainer.style.height = `${floatingHeight}px`;
             outerContainer.style.right = `${rightOffset}px`;
             outerContainer.style.bottom = `${bottomOffset}px`;
+
             if (innerContainer) {
                 innerContainer.style.width = `${floatingWidth}px`;
                 innerContainer.style.height = `${floatingHeight}px`;
@@ -210,76 +221,107 @@
                 ivVideoContent.style.width = `${floatingWidth}px`;
                 ivVideoContent.style.height = `${floatingHeight}px`;
             }
-            GM_log(`resize: 窗口大小改变，更新缩小容器/视频/IV内容尺寸和位置`);
         }
     }
 
-    function waitForElements() {
+    function cleanup() {
+        GM_log('🧹 cleanup: 清理上一页状态');
+
+        if (intersectionObserver) {
+            intersectionObserver.disconnect();
+            intersectionObserver = null;
+            GM_log('🛑 断开 IntersectionObserver');
+        }
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+            GM_log('🛑 断开 MutationObserver');
+        }
+
+        restoreOuterContainer();
+        playerElement = null;
+        outerContainer = null;
+        innerContainer = null;
+        videoElement = null;
+        ivVideoContent = null;
+        bottomChrome = null;
+        initializedUrl = null;
+    }
+
+    function initialize() {
         playerElement = document.getElementById('player');
         outerContainer = document.getElementById('player-container-outer');
         innerContainer = document.getElementById('player-container-inner');
         videoElement = document.querySelector('video.video-stream.html5-main-video');
         ivVideoContent = document.querySelector('.ytp-iv-video-content');
         bottomChrome = document.querySelector('.ytp-chrome-bottom');
-        const contentsElement = document.getElementById('contents'); // 修改这里
-    
-        GM_log(`waitForElements: 尝试获取元素 - player: ${playerElement}, outer: ${outerContainer}, inner: ${innerContainer}, video: ${videoElement}, iv: ${ivVideoContent}, bottom: ${bottomChrome}, contents: ${contentsElement}`); // 打印修改了
-    
-        if (playerElement && outerContainer && innerContainer && videoElement && contentsElement) { // 修改这里
-            GM_log('waitForElements: 所有必要元素已找到，调用 initialize');
-            initialize();
-        } else {
-            if (!observer) {
-                observer = new MutationObserver(mutations => {
-                    const foundPlayer = document.getElementById('player');
-                    const foundOuterContainer = document.getElementById('player-container-outer');
-                    const foundInnerContainer = document.getElementById('player-container-inner');
-                    const foundVideo = document.querySelector('video.video-stream.html5-main-video');
-                    const foundContents = document.getElementById('contents'); // 修改这里
-    
-                    if (foundPlayer && foundOuterContainer && foundInnerContainer && foundVideo && foundContents) { // 修改这里
-                        GM_log('MutationObserver: 检测到所有必要元素，调用 initialize');
-                        initialize();
-                    } else {
-                        GM_log('MutationObserver: 仍然有必要元素未找到');
-                    }
-                });
-    
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                });
-                GM_log('waitForElements: 开始监听 DOM 变化');
-            } else {
-                GM_log('waitForElements: MutationObserver 已经在监听 DOM 变化');
+
+        if (playerElement && outerContainer && innerContainer && videoElement && document.getElementById('contents')) {
+            GM_log('🚀 initialize: 必要元素齐备，初始化完成');
+            observePlayerVisibility();
+            window.addEventListener('resize', handleResize);
+            if (observer) {
+                observer.disconnect();
+                observer = null;
             }
+            isMiniPlayerActive = false;
+
+            const rect = playerElement.getBoundingClientRect();
+            if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+                restoreOuterContainer();
+            } else {
+                minimizeOuterContainer();
+            }
+
+            initializedUrl = location.href;
+            GM_log(`📌 初始化完成，记录当前URL: ${initializedUrl}`);
+        } else {
+            waitForElements();
         }
     }
 
-    // 监听页面 DOMContentLoaded 事件以进行重新初始化
-    document.addEventListener('DOMContentLoaded', () => {
-        GM_log('DOMContentLoaded: 页面加载完成，重新初始化脚本');
-        window.removeEventListener('resize', handleResize);
-        if (intersectionObserver) {
-            intersectionObserver.disconnect();
-            intersectionObserver = null;
+    function checkUrlAndInitialize() {
+        if (location.pathname.startsWith('/watch')) {
+            if (location.href !== initializedUrl) {
+                GM_log('🔄 检测到新watch页面，需要初始化');
+                setTimeout(() => initialize(), 500);
+            } else {
+                GM_log('⏩ 当前watch页面已初始化，跳过');
+            }
+        } else {
+            GM_log('⏸️ 当前不是watch页面，执行清理');
+            cleanup();
         }
-        if (observer) {
-            observer.disconnect();
-            observer = null;
-        }
-        setTimeout(initialize, 500);
-    });
-    GM_log('添加 DOMContentLoaded 事件监听器');
+    }
 
-    // 初始执行
-    setTimeout(initialize, 500);
-    GM_log('脚本初始设置延迟后的元素检查');
+    function startUrlWatcher() {
+        setInterval(() => {
+            if (location.href !== lastUrl) {
+                GM_log(`🌍 URL变化: ${lastUrl} -> ${location.href}`);
+                lastUrl = location.href;
+                checkUrlAndInitialize();
+            }
+        }, 300);
+    }
+
+    function start() {
+        GM_log('⚡ 页面准备完毕，开始检测URL变化');
+        checkUrlAndInitialize();
+        startUrlWatcher();
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        GM_log('✅ 页面已ready，直接启动start()');
+        start();
+    } else {
+        GM_log('⏳ 页面未ready，等待DOMContentLoaded');
+        document.addEventListener('DOMContentLoaded', start);
+    }
 
     GM_addStyle(`
         .${miniPlayerClass} {
             transition: width 0.3s ease, height 0.3s ease, right 0.3s ease, bottom 0.3s ease;
+            cursor: move;
         }
     `);
-    GM_log('添加缩小状态的 CSS');
 })();
